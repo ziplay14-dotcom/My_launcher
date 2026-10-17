@@ -1,0 +1,618 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101114">
+<title>My App Launcher</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #101114;
+  --panel: #1b1d23;
+  --panel2: #272a33;
+  --text: #f4f5f7;
+  --muted: #a1a5b1;
+  --accent: #8170ff;
+  --border: #363943;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+header {
+  padding: 26px 18px 20px;
+  padding-top: max(26px, env(safe-area-inset-top));
+  background: linear-gradient(150deg, #292447, #15151d 65%, #101114);
+}
+h1 { margin: 0 0 5px; font-size: 27px; }
+.subtitle { color: var(--muted); font-size: 13px; }
+main { max-width: 950px; margin: auto; padding: 15px; }
+.toolbar {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-bottom: 15px;
+}
+input, textarea {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  font: inherit;
+  width: 100%;
+  min-width: 0;
+}
+#search { flex: 1 1 180px; }
+button, .file-label {
+  border: 1px solid var(--border);
+  background: var(--panel2);
+  color: var(--text);
+  padding: 11px 13px;
+  border-radius: 12px;
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button:active { transform: scale(.98); }
+.primary {
+  background: var(--accent);
+  color: white;
+  border-color: transparent;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+@media (min-width: 600px) {
+  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 850px) {
+  .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.app {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  padding: 13px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.app-icon {
+  width: 55px;
+  height: 55px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  background: var(--icon-bg, #343741);
+}
+.app-name {
+  font-size: 14px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+.app-type {
+  color: var(--muted);
+  font-size: 11px;
+  min-height: 28px;
+}
+.open-btn { width: 100%; margin-top: auto; }
+.card-actions { display: flex; gap: 6px; }
+.card-actions button {
+  flex: 1;
+  padding: 8px 3px;
+  font-size: 11px;
+}
+details {
+  margin-top: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 13px;
+}
+summary { cursor: pointer; font-weight: 650; }
+.settings-form { display: grid; gap: 11px; margin-top: 14px; }
+.field { display: grid; gap: 5px; }
+.field label { color: var(--muted); font-size: 12px; }
+input[type="color"] { height: 44px; padding: 5px; }
+.form-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.notice {
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--muted);
+  margin-top: 15px;
+}
+.empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--muted);
+  padding: 40px 10px;
+}
+.file-label { display: block; text-align: center; }
+footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 24px;
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>🚀 My Launcher</h1>
+  <div class="subtitle">Все твои приложения в одном месте</div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <input id="search" type="search" placeholder="🔎 Найти приложение..." autocomplete="off">
+    <button class="primary" id="addBtn">＋ Добавить</button>
+  </div>
+
+  <section class="grid" id="apps" aria-label="Приложения"></section>
+
+  <details id="editor">
+    <summary id="editorTitle">Добавить приложение</summary>
+    <form class="settings-form" id="appForm">
+      <input type="hidden" id="appId">
+
+      <div class="field">
+        <label for="name">Название</label>
+        <input id="name" required maxlength="60" placeholder="Название приложения">
+      </div>
+
+      <div class="field">
+        <label for="emoji">Иконка / эмодзи</label>
+        <input id="emoji" maxlength="8" value="📱" placeholder="📱">
+      </div>
+
+      <div class="field">
+        <label for="color">Цвет карточки</label>
+        <input id="color" type="color" value="#343741">
+      </div>
+
+      <div class="field">
+        <label for="url">Ссылка запуска</label>
+        <input id="url" required placeholder="https://... или схема приложения">
+      </div>
+
+      <div class="field">
+        <label for="description">Описание</label>
+        <input id="description" maxlength="100" placeholder="Игра, браузер, VPN...">
+      </div>
+
+      <div class="form-actions">
+        <button class="primary" type="submit">Сохранить</button>
+        <button type="button" id="cancelBtn">Отмена</button>
+      </div>
+    </form>
+  </details>
+
+  <details>
+    <summary>Импорт и экспорт списка</summary>
+    <div class="settings-form">
+      <button type="button" id="exportBtn">Экспортировать JSON</button>
+      <label class="file-label">
+        Импортировать JSON
+        <input type="file" id="importFile" accept=".json,application/json" hidden>
+      </label>
+      <button type="button" id="resetBtn">Восстановить стандартный список</button>
+    </div>
+  </details>
+
+  <div class="notice">
+    Настройки сохраняются в хранилище браузера.
+    Запуск внешних приложений зависит от Android, браузера и версии приложения.
+    Если приложение не запускается, проверь ссылку в настройках его карточки.
+  </div>
+</main>
+
+<footer>MY LAUNCHER · HTML EDITION</footer>
+
+<script>
+"use strict";
+
+const DEFAULT_APPS = [
+  {
+    id: "melon",
+    name: "Melon Playground",
+    emoji: "🍉",
+    color: "#477c39",
+    description: "Песочница",
+    url: "intent://launch/#Intent;package=com.studio27.MelonPlayground;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;end"
+  },
+  {
+    id: "youtube",
+    name: "YouTube",
+    emoji: "▶️",
+    color: "#e52d27",
+    description: "Видео",
+    url: "https://www.youtube.com/"
+  },
+  {
+    id: "roblox",
+    name: "Roblox",
+    emoji: "⬜",
+    color: "#353535",
+    description: "Игры",
+    url: "roblox://"
+  },
+  {
+    id: "telegram",
+    name: "Telegram",
+    emoji: "✈️",
+    color: "#238ccc",
+    description: "Мессенджер",
+    url: "tg://"
+  },
+  {
+    id: "discord",
+    name: "Discord",
+    emoji: "🎮",
+    color: "#5865f2",
+    description: "Общение",
+    url: "https://discord.com/app"
+  },
+  {
+    id: "google",
+    name: "Google",
+    emoji: "🔍",
+    color: "#4285f4",
+    description: "Поиск",
+    url: "https://www.google.com/"
+  },
+  {
+    id: "geode",
+    name: "Geode",
+    emoji: "🟣",
+    color: "#7655d9",
+    description: "Geometry Dash с модами",
+    url: "geode-launcher://main/launch"
+  },
+  {
+    id: "brawl",
+    name: "Brawl Stars",
+    emoji: "⭐",
+    color: "#e9a52e",
+    description: "Игра",
+    url: "intent://launch/#Intent;package=com.supercell.brawlstars;end"
+  },
+  {
+    id: "adguard",
+    name: "AdGuard VPN",
+    emoji: "🛡️",
+    color: "#67a94d",
+    description: "VPN",
+    url: "intent://launch/#Intent;package=com.adguard.vpn;end"
+  },
+  {
+    id: "hiro",
+    name: "Hiro VPN",
+    emoji: "🌐",
+    color: "#397cdb",
+    description: "VPN",
+    url: "intent://launch/#Intent;package=com.hiro.vpn;end"
+  },
+  {
+    id: "fkey",
+    name: "FKey VPN",
+    emoji: "🔐",
+    color: "#6e70d9",
+    description: "VPN",
+    url: "intent://launch/#Intent;package=win.fkey.netboost;end"
+  },
+  {
+    id: "code-editor",
+    name: "Редактор кода",
+    emoji: "👨‍💻",
+    color: "#2878d0",
+    description: "Редактирование кода",
+    url: "https://vscode.dev/"
+  },
+  {
+    id: "chatgpt",
+    name: "ChatGPT",
+    emoji: "💛",
+    color: "#b49a22",
+    description: "Искусственный интеллект",
+    url: "https://chatgpt.com/"
+  },
+  {
+    id: "deepseek",
+    name: "DeepSeek",
+    emoji: "🐳",
+    color: "#2878d0",
+    description: "Искусственный интеллект",
+    url: "https://chat.deepseek.com/"
+  }
+];
+
+const STORAGE_KEY = "myLauncherApps_v3";
+const $ = id => document.getElementById(id);
+
+function validApp(app) {
+  return app &&
+    typeof app.name === "string" &&
+    typeof app.url === "string" &&
+    app.url.length > 0;
+}
+
+function loadApps() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.every(validApp)) {
+        // Обновляем старый список: новые приложения добавляются автоматически,
+        // а существующие пользовательские настройки сохраняются.
+        const merged = parsed.map(app => ({ ...app }));
+        for (const defaultApp of DEFAULT_APPS) {
+          if (!merged.some(app => app.id === defaultApp.id)) {
+            merged.push({ ...defaultApp });
+          }
+        }
+        return merged;
+      }
+    }
+  } catch (error) {
+    console.warn("Не удалось загрузить сохранённый список:", error);
+  }
+  return DEFAULT_APPS.map(app => ({ ...app }));
+}
+
+let apps = loadApps();
+
+function saveApps() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(apps));
+  } catch (error) {
+    alert("Не удалось сохранить настройки браузера.");
+  }
+}
+
+function safeColor(value) {
+  return /^#[0-9a-fA-F]{6}$/.test(value || "")
+    ? value
+    : "#343741";
+}
+
+function render() {
+  const query = $("search").value.trim().toLowerCase();
+  const container = $("apps");
+  container.replaceChildren();
+
+  const filtered = apps.filter(app =>
+    (app.name + " " + (app.description || ""))
+      .toLowerCase()
+      .includes(query)
+  );
+
+  if (!filtered.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "Ничего не найдено";
+    container.appendChild(empty);
+    return;
+  }
+
+  for (const app of filtered) {
+    const card = document.createElement("article");
+    card.className = "app";
+
+    const icon = document.createElement("div");
+    icon.className = "app-icon";
+    icon.style.setProperty("--icon-bg", safeColor(app.color));
+    icon.textContent = app.emoji || "📱";
+
+    const name = document.createElement("div");
+    name.className = "app-name";
+    name.textContent = app.name;
+
+    const type = document.createElement("div");
+    type.className = "app-type";
+    type.textContent = app.description || "Приложение";
+
+    const open = document.createElement("button");
+    open.className = "primary open-btn";
+    open.textContent = "Открыть";
+    open.addEventListener("click", () => openApp(app.url));
+
+    const actions = document.createElement("div");
+    actions.className = "card-actions";
+
+    const edit = document.createElement("button");
+    edit.textContent = "Изменить";
+    edit.addEventListener("click", () => editApp(app));
+
+    const remove = document.createElement("button");
+    remove.textContent = "Удалить";
+    remove.addEventListener("click", () => deleteApp(app.id));
+
+    actions.append(edit, remove);
+    card.append(icon, name, type, open, actions);
+    container.appendChild(card);
+  }
+}
+
+function openApp(rawUrl) {
+  const value = rawUrl.trim();
+
+  // Не разрешаем javascript:, data: и прочие исполняемые схемы.
+  const allowedPrefixes = [
+    "https://",
+    "http://",
+    "intent://",
+    "roblox://",
+    "tg://",
+    "geode-launcher://"
+  ];
+
+  if (!allowedPrefixes.some(prefix =>
+    value.toLowerCase().startsWith(prefix)
+  )) {
+    alert(
+      "Неизвестная схема ссылки. Проверь адрес в настройках карточки."
+    );
+    return;
+  }
+
+  window.location.href = value;
+}
+
+function editApp(app) {
+  $("appId").value = app.id || "";
+  $("name").value = app.name;
+  $("emoji").value = app.emoji || "📱";
+  $("color").value = safeColor(app.color);
+  $("url").value = app.url;
+  $("description").value = app.description || "";
+  $("editorTitle").textContent = "Редактирование приложения";
+  $("editor").open = true;
+  $("editor").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function clearForm() {
+  $("appForm").reset();
+  $("appId").value = "";
+  $("emoji").value = "📱";
+  $("color").value = "#343741";
+  $("editorTitle").textContent = "Добавить приложение";
+}
+
+function deleteApp(id) {
+  const app = apps.find(item => item.id === id);
+  if (!app) return;
+
+  if (!confirm('Удалить ярлык "' + app.name + '"?')) return;
+
+  apps = apps.filter(item => item.id !== id);
+  saveApps();
+  render();
+}
+
+$("search").addEventListener("input", render);
+
+$("addBtn").addEventListener("click", () => {
+  clearForm();
+  $("editor").open = true;
+  $("editor").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+$("cancelBtn").addEventListener("click", clearForm);
+
+$("appForm").addEventListener("submit", event => {
+  event.preventDefault();
+
+  const name = $("name").value.trim();
+  const url = $("url").value.trim();
+
+  if (!name || !url) {
+    alert("Укажи название и ссылку.");
+    return;
+  }
+
+  const id = $("appId").value;
+  const existing = apps.find(app => app.id === id);
+
+  const item = {
+    id: existing
+      ? existing.id
+      : "app_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7),
+    name,
+    emoji: $("emoji").value.trim() || "📱",
+    color: safeColor($("color").value),
+    url,
+    description: $("description").value.trim()
+  };
+
+  if (existing) {
+    apps = apps.map(app => app.id === id ? item : app);
+  } else {
+    apps.push(item);
+  }
+
+  saveApps();
+  render();
+  clearForm();
+  $("editor").open = false;
+});
+
+$("exportBtn").addEventListener("click", () => {
+  const blob = new Blob(
+    [JSON.stringify(apps, null, 2)],
+    { type: "application/json" }
+  );
+
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = "my-launcher-apps.json";
+  link.click();
+
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+});
+
+$("importFile").addEventListener("change", async event => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    const imported = JSON.parse(await file.text());
+
+    if (!Array.isArray(imported) || !imported.every(validApp)) {
+      throw new Error("Неверный формат");
+    }
+
+    if (!confirm("Заменить текущий список импортированным?")) return;
+
+    apps = imported.map((app, index) => ({
+      id: String(app.id || "imported_" + index + "_" + Date.now()),
+      name: app.name.slice(0, 60),
+      emoji: String(app.emoji || "📱").slice(0, 8),
+      color: safeColor(app.color),
+      url: app.url,
+      description: String(app.description || "").slice(0, 100)
+    }));
+
+    // После импорта добавляем недостающие стандартные карточки.
+    for (const defaultApp of DEFAULT_APPS) {
+      if (!apps.some(app => app.id === defaultApp.id)) {
+        apps.push({ ...defaultApp });
+      }
+    }
+
+    saveApps();
+    render();
+    alert("Список импортирован.");
+  } catch {
+    alert("Не удалось импортировать файл. Проверь JSON.");
+  } finally {
+    event.target.value = "";
+  }
+});
+
+$("resetBtn").addEventListener("click", () => {
+  if (!confirm("Восстановить стандартный список? Текущий список будет заменён.")) {
+    return;
+  }
+
+  apps = DEFAULT_APPS.map(app => ({ ...app }));
+  saveApps();
+  render();
+});
+
+saveApps();
+render();
+</script>
+</body>
+</html>
